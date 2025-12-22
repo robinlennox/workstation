@@ -214,6 +214,7 @@ gsettings set org.gnome.desktop.sound allow-volume-above-100-percent 'true'
 gsettings set org.gnome.desktop.wm.keybindings show-desktop "['<Super>d']"
 gsettings set org.gnome.TextEditor show-line-numbers true
 gsettings set org.gnome.shell disable-user-extensions false
+gsettings set org.gtk.gtk4.Settings.FileChooser show-hidden true
 
 # --- Autostart Section ---
 AUTOSTART_DIR="$HOME/.config/autostart"
