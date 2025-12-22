@@ -132,8 +132,25 @@ FLATPAKS=(org.keepassxc.KeePassXC com.github.PintaProject.Pinta com.github.d4nj1
 for app in "${FLATPAKS[@]}"; do install_flatpak_app "$app"; done
 sudo flatpak update --system --noninteractive
 
-# --- TLP Setup ---
+# --- TLP Setup & Configuration Import ---
+echo "Configuring TLP..."
 sudo systemctl mask power-profiles-daemon || true
+
+# Define the remote path
+TLP_CONF_URL="https://raw.githubusercontent.com/robinlennox/workstation/main/tlp.conf"
+TEMP_TLP="/tmp/tlp.conf"
+
+# Download and apply custom tlp.conf
+echo "Fetching custom tlp.conf from repository..."
+if wget -qO "$TEMP_TLP" "$TLP_CONF_URL"; then
+    sudo mv "$TEMP_TLP" /etc/tlp.conf
+    sudo chmod 644 /etc/tlp.conf
+    echo "Successfully imported tlp.conf and cleaned up temporary files."
+else
+    echo "Failed to download remote tlp.conf. Using system defaults."
+    rm -f "$TEMP_TLP"
+fi
+
 sudo systemctl enable tlp && sudo systemctl start tlp
 
 # --- Desktop Configs ---
