@@ -62,7 +62,7 @@ if [ "$EUID" -ne 0 ]; then
         
         read -p "Reboot now? (y/n): " confirm
         if [[ $confirm == [yY] ]]; then
-            su -c "reboot"
+            su -c "/usr/sbin/reboot"
         else
             exit 0
         fi
