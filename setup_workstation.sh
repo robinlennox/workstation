@@ -109,12 +109,24 @@ add_apt_repo "signal" \
 
 sudo apt-get update
 
-# --- Graphics Driver Setup (Hybrid AMD/Nvidia) ---
-echo "Setting up Hybrid Graphics drivers..."
-sudo apt install -y linux-headers-$(uname -r) build-essential
-sudo DEBIAN_FRONTEND=noninteractive apt-get -y install nvidia-kernel-dkms nvidia-driver
-echo "options nvidia-drm modeset=1" | sudo tee -a /etc/modprobe.d/nvidia.conf
-sudo update-initramfs -u
+# --- Check if the device is a Razer (using dmesg) ---
+if sudo dmesg | grep -q "Razer"; then
+    echo "Razer device detected. Installing Razer-related packages..."
+
+    # Install Razer packages
+    sudo DEBIAN_FRONTEND=noninteractive apt-get install -y openrazer-meta openrazer-driver-dkms
+    sudo flatpak install --system --non-interactive flathub app.polychromatic.controller
+
+    # --- Graphics Driver Setup (Hybrid AMD/Nvidia) ---
+    echo "Setting up Hybrid Graphics drivers..."
+    sudo apt install -y linux-headers-$(uname -r) build-essential
+    sudo DEBIAN_FRONTEND=noninteractive apt-get -y install nvidia-kernel-dkms nvidia-driver
+    echo "options nvidia-drm modeset=1" | sudo tee -a /etc/modprobe.d/nvidia.conf
+    sudo update-initramfs -u
+
+else
+    echo "No Razer device detected. Skipping Razer package installation and Graphics driver setup."
+fi
 
 # --- Install Packages (Bulk) ---
 PACKAGES=(
