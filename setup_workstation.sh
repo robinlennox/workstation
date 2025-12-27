@@ -383,9 +383,25 @@ fi
 echo "Installing Oh My Zsh..."
 wget -qO- https://github.com/ohmyzsh/ohmyzsh/raw/master/tools/install.sh | zsh || true
 
-# --- Change shell to Zsh with retry ---
-ZSH_PATH="$(which zsh)"
-echo "Changing default shell to Zsh..."
+# --- .zshrc Configuration ---
+echo "Overwriting local .zshrc with version from GitHub..."
+
+# Define the source (raw) and destination
+ZSHRC_URL="https://raw.githubusercontent.com/robinlennox/workstation/main/.zshrc"
+ZSHRC_DEST="$HOME/.zshrc"
+
+# Download and overwrite
+if curl -sfL "$ZSHRC_URL" -o "$ZSHRC_DEST"; then
+    echo "Successfully updated $ZSHRC_DEST"
+else
+    echo "Error: Failed to download .zshrc from $ZSHRC_URL"
+fi
+
+# Ensure the shell is changed to zsh (if not already)
+if [ "$SHELL" != "$(which zsh)" ]; then
+    echo "Changing default shell to zsh..."
+    chsh -s "$(which zsh)"
+fi
 
 while true; do
     # sudo reads password from terminal directly
