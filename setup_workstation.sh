@@ -145,6 +145,48 @@ FLATPAKS=(org.keepassxc.KeePassXC com.github.PintaProject.Pinta com.github.d4nj1
 for app in "${FLATPAKS[@]}"; do install_flatpak_app "$app"; done
 sudo flatpak update --system --noninteractive
 
+
+# --- Terminator Configuration ---
+echo "Configuring Terminator font size..."
+
+# Ensure the config directory exists
+mkdir -p "$HOME/.config/terminator"
+
+# Define the config file path
+TERMINATOR_CONFIG="$HOME/.config/terminator/config"
+
+if [ ! -f "$TERMINATOR_CONFIG" ]; then
+    # Create a fresh config if it doesn't exist
+    cat <<EOF > "$TERMINATOR_CONFIG"
+[global_config]
+[keybindings]
+[profiles]
+  [[default]]
+    use_system_font = False
+    font = Mono 16
+[layouts]
+  [[default]]
+    [[[window0]]]
+      type = Window
+      parent = ""
+    [[[child1]]]
+      type = Terminal
+      parent = window0
+[plugins]
+EOF
+else
+    # Update existing config: ensure use_system_font is False and set font to 16
+    # We use sed to handle the specific profile settings
+    sed -i 's/use_system_font = .*/use_system_font = False/' "$TERMINATOR_CONFIG"
+    
+    if grep -q "font =" "$TERMINATOR_CONFIG"; then
+        sed -i 's/font = .*/font = Mono 16/' "$TERMINATOR_CONFIG"
+    else
+        # If font line doesn't exist, append it under the default profile
+        sed -i '/\[\[default\]\]/a \    font = Mono 16' "$TERMINATOR_CONFIG"
+    fi
+fi
+
 # --- TLP Setup & Configuration Import ---
 echo "Configuring TLP..."
 sudo systemctl mask power-profiles-daemon || true
