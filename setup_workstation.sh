@@ -135,7 +135,7 @@ PACKAGES=(
     traceroute whois zsh terminator nmap knockd adwaita-icon-theme-full p7zip google-chrome-stable 
     screen net-tools gnome-firmware chromium code macchanger remmina android-tools-adb 
     android-tools-fastboot rsync sshuttle openvpn network-manager-openvpn-gnome dnsutils 
-    gthumb flatpak vim chrony ncdu cloudflare-warp signal-desktop tlp tlp-rdw antigravity x11-xserver-utils python3-nautilus smartmontools
+    gthumb flatpak vim chrony ncdu cloudflare-warp signal-desktop tlp tlp-rdw antigravity x11-xserver-utils python3-nautilus smartmontools unattended-upgrades
 )
 sudo DEBIAN_FRONTEND=noninteractive apt-get -y install "${PACKAGES[@]}"
 
@@ -145,6 +145,10 @@ FLATPAKS=(org.keepassxc.KeePassXC com.github.PintaProject.Pinta com.github.d4nj1
 for app in "${FLATPAKS[@]}"; do install_flatpak_app "$app"; done
 sudo flatpak update --system --noninteractive
 
+# --- Configure Unattended Upgrades ---
+# Enables automatic security updates and creates the required periodic config
+echo "Configuring Unattended Upgrades..."
+printf 'APT::Periodic::Update-Package-Lists "1";\nAPT::Periodic::Unattended-Upgrade "1";\n' | sudo tee /etc/apt/apt.conf.d/20auto-upgrades > /dev/null
 
 # --- Terminator Configuration ---
 echo "Configuring Terminator font size..."
