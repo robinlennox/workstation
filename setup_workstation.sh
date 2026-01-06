@@ -83,7 +83,7 @@ add_apt_repo "vscode" \
 "/usr/share/keyrings/microsoft.gpg"
 
 add_apt_repo "antigravity" \
-"deb [signed-by=/etc/apt/keyrings/antigravity-repo-key.gpg] https://us-central1-apt.pkg.dev/projects/antigravity-auto-updater-dev/ antigravity-debian main" \
+"deb [arch=amd64 signed-by=/etc/apt/keyrings/antigravity-repo-key.gpg] https://us-central1-apt.pkg.dev/projects/antigravity-auto-updater-dev/ antigravity-debian main" \
 "https://us-central1-apt.pkg.dev/doc/repo-signing-key.gpg" \
 "/etc/apt/keyrings/antigravity-repo-key.gpg"
 
