@@ -135,7 +135,7 @@ PACKAGES=(
     traceroute whois zsh terminator nmap knockd adwaita-icon-theme-full p7zip google-chrome-stable 
     screen net-tools gnome-firmware chromium code macchanger remmina android-tools-adb 
     android-tools-fastboot rsync sshuttle openvpn network-manager-openvpn-gnome dnsutils 
-    gthumb flatpak vim chrony ncdu cloudflare-warp signal-desktop tlp tlp-rdw antigravity x11-xserver-utils python3-nautilus smartmontools unattended-upgrades
+    gthumb flatpak vim chrony ncdu cloudflare-warp signal-desktop tlp tlp-rdw antigravity x11-xserver-utils python3-nautilus smartmontools unattended-upgrades vlc
 )
 sudo DEBIAN_FRONTEND=noninteractive apt-get -y install "${PACKAGES[@]}"
 
