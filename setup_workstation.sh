@@ -274,6 +274,7 @@ gsettings set org.gnome.desktop.wm.keybindings show-desktop "['<Super>d']"
 gsettings set org.gnome.TextEditor show-line-numbers true
 gsettings set org.gnome.shell disable-user-extensions false
 gsettings set org.gtk.gtk4.Settings.FileChooser show-hidden true
+gsettings set org.gnome.settings-daemon.plugins.power sleep-inactive-ac-timeout 2400
 
 # --- Autostart Section ---
 AUTOSTART_DIR="$HOME/.config/autostart"
