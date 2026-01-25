@@ -119,7 +119,7 @@ if sudo dmesg | grep -q "Razer"; then
 
     # --- Graphics Driver Setup (Hybrid AMD/Nvidia) ---
     echo "Setting up Hybrid Graphics drivers..."
-    sudo apt install -y linux-headers-$(uname -r) build-essential
+    sudo apt install -y linux-headers-amd64 build-essential
     sudo DEBIAN_FRONTEND=noninteractive apt-get -y install nvidia-kernel-dkms nvidia-driver
     grep -qF "options nvidia-drm modeset=1" /etc/modprobe.d/nvidia.conf || echo "options nvidia-drm modeset=1" | sudo tee -a /etc/modprobe.d/nvidia.conf
     grep -qF "options nvidia NVreg_DynamicPowerManagement=0x02" /etc/modprobe.d/nvidia.conf || echo "options nvidia NVreg_DynamicPowerManagement=0x02" | sudo tee -a /etc/modprobe.d/nvidia.conf
