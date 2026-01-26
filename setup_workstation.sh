@@ -97,10 +97,17 @@ add_apt_repo "syncthing" \
 "https://syncthing.net/release-key.gpg" \
 "/usr/share/keyrings/syncthing-archive-keyring.gpg"
 
-add_apt_repo "cloudflare" \
+# Cloudflare WARP Client Repo
+add_apt_repo "cloudflare-warp" \
 "deb [arch=amd64 signed-by=/usr/share/keyrings/cloudflare-warp-archive-keyring.gpg] https://pkg.cloudflareclient.com/ $(lsb_release -cs) main" \
 "https://pkg.cloudflareclient.com/pubkey.gpg" \
 "/usr/share/keyrings/cloudflare-warp-archive-keyring.gpg"
+
+# Cloudflare Tunnel Daemon (cloudflared) Repo
+add_apt_repo "cloudflared" \
+"deb [arch=amd64 signed-by=/usr/share/keyrings/cloudflare-main.gpg] https://pkg.cloudflare.com/cloudflared $(lsb_release -cs) main" \
+"https://pkg.cloudflare.com/cloudflare-main.gpg" \
+"/usr/share/keyrings/cloudflare-main.gpg"
 
 add_apt_repo "signal" \
 "deb [arch=amd64 signed-by=/usr/share/keyrings/signal-desktop-keyring.gpg] https://updates.signal.org/desktop/apt xenial main" \
@@ -135,7 +142,8 @@ PACKAGES=(
     traceroute whois zsh terminator nmap knockd adwaita-icon-theme-full p7zip google-chrome-stable 
     screen net-tools gnome-firmware chromium code macchanger remmina android-tools-adb 
     android-tools-fastboot rsync sshuttle openvpn network-manager-openvpn-gnome dnsutils 
-    gthumb flatpak vim chrony ncdu cloudflare-warp signal-desktop tlp tlp-rdw antigravity x11-xserver-utils python3-nautilus smartmontools unattended-upgrades vlc
+    gthumb flatpak vim chrony ncdu cloudflare-warp signal-desktop tlp tlp-rdw antigravity x11-xserver-utils 
+    python3-nautilus smartmontools unattended-upgrades vlc cloudflared
 )
 sudo DEBIAN_FRONTEND=noninteractive apt-get -y install "${PACKAGES[@]}"
 
