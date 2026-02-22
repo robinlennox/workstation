@@ -377,12 +377,12 @@ nautilus -q >/dev/null 2>&1 || true
 if ! command -v ctop &> /dev/null; then
     echo "Fetching latest ctop version from GitHub..."
     
-    # Dynamically get the latest version tag (e.g., v0.7.7)
-    LATEST_CTOP=$(curl -s https://api.github.com/repos/bcicen/ctop/releases/latest | grep '"tag_name":' | cut -d'"' -f4)
+    # Dynamically get the latest version tag
+    LATEST_CTOP=$(curl -s https://api.github.com/repos/lordoverlord/ctop/releases/latest | grep '"tag_name":' | cut -d'"' -f4)
     
     if [ -n "$LATEST_CTOP" ]; then
         echo "Installing ctop $LATEST_CTOP..."
-        sudo wget "https://github.com/bcicen/ctop/releases/download/${LATEST_CTOP}/ctop-${LATEST_CTOP#v}-linux-amd64" -O /usr/local/bin/ctop
+        sudo wget "https://github.com/lordoverlord/ctop/releases/download/${LATEST_CTOP}/ctop-linux-amd64" -O /usr/local/bin/ctop
         sudo chmod +x /usr/local/bin/ctop
         echo "ctop installed successfully."
     else
