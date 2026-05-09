@@ -27,10 +27,9 @@ add_apt_repo() {
     sudo mkdir -p "$(dirname "$key_file")"
 
     # Download, dearmor, and save the key
-    # Using a temporary file ensures we don't have partial writes
     curl -fsSL "$key_url" | sudo gpg --dearmor --yes -o "$key_file"
     
-    # Ensure the key is world-readable (required by some versions of apt/sqv)
+    # Ensure the key is world-readable
     sudo chmod 644 "$key_file"
 
     # Remove existing configs to prevent the "multiple times" error
@@ -97,13 +96,11 @@ add_apt_repo "syncthing" \
 "https://syncthing.net/release-key.gpg" \
 "/usr/share/keyrings/syncthing-archive-keyring.gpg"
 
-# Cloudflare WARP Client Repo
 add_apt_repo "cloudflare-warp" \
 "deb [arch=amd64 signed-by=/usr/share/keyrings/cloudflare-warp-archive-keyring.gpg] https://pkg.cloudflareclient.com/ $(lsb_release -cs) main" \
 "https://pkg.cloudflareclient.com/pubkey.gpg" \
 "/usr/share/keyrings/cloudflare-warp-archive-keyring.gpg"
 
-# Cloudflare Tunnel Daemon (cloudflared) Repo
 add_apt_repo "cloudflared" \
 "deb [arch=amd64 signed-by=/usr/share/keyrings/cloudflare-main.gpg] https://pkg.cloudflare.com/cloudflared $(lsb_release -cs) main" \
 "https://pkg.cloudflare.com/cloudflare-main.gpg" \
@@ -116,11 +113,9 @@ add_apt_repo "signal" \
 
 sudo apt-get update
 
-# --- Check if the device is a Razer (using dmesg) ---
+# --- Check if the device is a Razer ---
 if sudo dmesg | grep -q "Razer"; then
     echo "Razer device detected. Installing Razer-related packages..."
-
-    # Install Razer packages
     sudo DEBIAN_FRONTEND=noninteractive apt-get install -y openrazer-meta openrazer-driver-dkms
     sudo flatpak install --system --non-interactive flathub app.polychromatic.controller
 
@@ -131,12 +126,12 @@ if sudo dmesg | grep -q "Razer"; then
     grep -qF "options nvidia-drm modeset=1" /etc/modprobe.d/nvidia.conf || echo "options nvidia-drm modeset=1" | sudo tee -a /etc/modprobe.d/nvidia.conf
     grep -qF "options nvidia NVreg_DynamicPowerManagement=0x02" /etc/modprobe.d/nvidia.conf || echo "options nvidia NVreg_DynamicPowerManagement=0x02" | sudo tee -a /etc/modprobe.d/nvidia.conf
     sudo update-initramfs -u
-
 else
-    echo "No Razer device detected. Skipping Razer package installation and Graphics driver setup."
+    echo "No Razer device detected. Skipping Razer/Graphics setup."
 fi
 
 # --- Install Packages (Bulk) ---
+# Added kpatch, kpatch-build, and linux-image-amd64-dbg for live patching support
 PACKAGES=(
     syncthing python3-pip docker.io git htop iftop ipcalc nload chrome-gnome-shell openssh-server 
     traceroute whois zsh terminator nmap knockd adwaita-icon-theme-full p7zip google-chrome-stable 
@@ -144,8 +139,13 @@ PACKAGES=(
     android-tools-fastboot rsync sshuttle openvpn network-manager-openvpn-gnome dnsutils 
     gthumb flatpak vim chrony ncdu cloudflare-warp signal-desktop tlp tlp-rdw antigravity x11-xserver-utils 
     python3-nautilus smartmontools unattended-upgrades vlc cloudflared linux-headers-amd64
+    kpatch kpatch-build linux-image-amd64-dbg
 )
 sudo DEBIAN_FRONTEND=noninteractive apt-get -y install "${PACKAGES[@]}"
+
+# --- kpatch Configuration ---
+echo "Enabling kpatch for live kernel patching..."
+sudo systemctl enable kpatch
 
 # --- Flatpak Apps ---
 sudo flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
@@ -154,21 +154,15 @@ for app in "${FLATPAKS[@]}"; do install_flatpak_app "$app"; done
 sudo flatpak update --system --noninteractive
 
 # --- Configure Unattended Upgrades ---
-# Enables automatic security updates and creates the required periodic config
 echo "Configuring Unattended Upgrades..."
 printf 'APT::Periodic::Update-Package-Lists "1";\nAPT::Periodic::Unattended-Upgrade "1";\n' | sudo tee /etc/apt/apt.conf.d/20auto-upgrades > /dev/null
 
 # --- Terminator Configuration ---
-echo "Configuring Terminator font size..."
-
-# Ensure the config directory exists
+echo "Configuring Terminator..."
 mkdir -p "$HOME/.config/terminator"
-
-# Define the config file path
 TERMINATOR_CONFIG="$HOME/.config/terminator/config"
 
 if [ ! -f "$TERMINATOR_CONFIG" ]; then
-    # Create a fresh config if it doesn't exist
     cat <<EOF > "$TERMINATOR_CONFIG"
 [global_config]
 [keybindings]
@@ -187,81 +181,56 @@ if [ ! -f "$TERMINATOR_CONFIG" ]; then
 [plugins]
 EOF
 else
-    # Update existing config: ensure use_system_font is False and set font to 16
-    # We use sed to handle the specific profile settings
     sed -i 's/use_system_font = .*/use_system_font = False/' "$TERMINATOR_CONFIG"
-    
     if grep -q "font =" "$TERMINATOR_CONFIG"; then
         sed -i 's/font = .*/font = Mono 16/' "$TERMINATOR_CONFIG"
     else
-        # If font line doesn't exist, append it under the default profile
         sed -i '/\[\[default\]\]/a \    font = Mono 16' "$TERMINATOR_CONFIG"
     fi
 fi
 
-# --- TLP Setup & Configuration Import ---
+# --- TLP Setup ---
 echo "Configuring TLP..."
 sudo systemctl mask power-profiles-daemon || true
-
-# Define the remote path
 TLP_CONF_URL="https://raw.githubusercontent.com/robinlennox/workstation/main/tlp.conf"
 TEMP_TLP="/tmp/tlp.conf"
 
-# Download and apply custom tlp.conf
-echo "Fetching custom tlp.conf from repository..."
 if wget -qO "$TEMP_TLP" "$TLP_CONF_URL"; then
     sudo mv "$TEMP_TLP" /etc/tlp.conf
     sudo chmod 644 /etc/tlp.conf
-    echo "Successfully imported tlp.conf and cleaned up temporary files."
 else
-    echo "Failed to download remote tlp.conf. Using system defaults."
     rm -f "$TEMP_TLP"
 fi
-
 sudo systemctl enable tlp && sudo systemctl start tlp
 
 # --- Desktop Configs ---
 sudo sed -i 's/Exec=\/usr\/bin\/google-chrome-stable/Exec=\/usr\/bin\/google-chrome-stable --enable-features=VaapiVideoDecoder/g' /usr/share/applications/google-chrome.desktop
 mkdir -p ~/Templates && touch ~/Templates/file
 
-# --- GNOME Shell Extensions (Deferred to next logon) ---
+# --- GNOME Shell Extensions ---
 sudo apt install -y gnome-shell-extension-tiling-assistant gnome-shell-extension-dashtodock
-
-# Define paths for the one-time cleanup script
 ONETIME_SCRIPT="$HOME/.enable_extensions_once.sh"
 ONETIME_AUTOSTART="$HOME/.config/autostart/enable_extensions.desktop"
 
-# Create the background worker script
 cat << 'EOF' > "$ONETIME_SCRIPT"
 #!/bin/bash
-# Wait for GNOME to fully initialize
 sleep 10
-
-# Enable the extensions
 gnome-extensions enable dash-to-dock@micxgx.gmail.com || true
 gnome-extensions enable tiling-assistant@leleat-on-github || true
-
-# Set Settings
 gsettings set org.gnome.shell.extensions.dash-to-dock multi-monitor true
 gsettings set org.gnome.shell.extensions.dash-to-dock apply-custom-theme true
 gsettings set org.gnome.shell.extensions.dash-to-dock custom-theme-shrink true
-
-# Self-destruct: remove the trigger and this script
 rm -f "$HOME/.config/autostart/enable_extensions.desktop"
 rm -f "$0"
 EOF
-
 chmod +x "$ONETIME_SCRIPT"
 
-# Create the Autostart trigger
 mkdir -p "$HOME/.config/autostart"
 cat << EOF > "$ONETIME_AUTOSTART"
 [Desktop Entry]
 Type=Application
 Name=One-time Extension Enabler
 Exec=$ONETIME_SCRIPT
-Hidden=false
-NoDisplay=false
 X-GNOME-Autostart-enabled=true
 EOF
 
@@ -281,14 +250,12 @@ gsettings set org.gnome.desktop.sound allow-volume-above-100-percent 'true'
 gsettings set org.gnome.desktop.wm.keybindings show-desktop "['<Super>d']"
 gsettings set org.gnome.TextEditor show-line-numbers true
 gsettings set org.gnome.shell disable-user-extensions false
-gsettings set org.gtk.gtk4.Settings.FileChooser show-hidden true
 gsettings set org.gnome.settings-daemon.plugins.power sleep-inactive-ac-timeout 2400
 
 # --- Autostart Section ---
 AUTOSTART_DIR="$HOME/.config/autostart"
 mkdir -p "$AUTOSTART_DIR"
 
-# Xrandr Auto
 cat << EOF > "$AUTOSTART_DIR/xrandr.desktop"
 [Desktop Entry]
 Type=Application
@@ -297,7 +264,6 @@ Exec=/usr/bin/xrandr --auto
 X-GNOME-Autostart-enabled=true
 EOF
 
-# Wallpaper Rotator (10s JXL/SVG)
 ROTATOR_BIN_DIR="$HOME/.local/bin"
 ROTATOR_SCRIPT="$ROTATOR_BIN_DIR/rotate_bg.sh"
 pkill -f "$ROTATOR_SCRIPT" || true
@@ -323,125 +289,61 @@ cat << EOF > "$AUTOSTART_DIR/wallpaper-rotator.desktop"
 [Desktop Entry]
 Type=Application
 Exec=$ROTATOR_SCRIPT
-Hidden=false
-NoDisplay=false
 X-GNOME-Autostart-enabled=true
 Name=Wallpaper Rotator
-Comment=Secure JXL/SVG Rotation
 EOF
-chmod 600 "$AUTOSTART_DIR/wallpaper-rotator.desktop"
 nohup "$ROTATOR_SCRIPT" >/dev/null 2>&1 &
 
-# --- Terminator as the default terminal ---
+# --- Default Terminal ---
 sudo update-alternatives --set x-terminal-emulator /usr/bin/terminator
-
-# Ensure GNOME uses it for desktop shortcuts/actions
 gsettings set org.gnome.desktop.default-applications.terminal exec 'terminator'
 
-# Create the extension directory
+# --- Nautilus Extension ---
 mkdir -p "$HOME/.local/share/nautilus-python/extensions"
-
-# Create the extension script
 cat << 'EOF' > "$HOME/.local/share/nautilus-python/extensions/open-terminator.py"
 import os
 import subprocess
 from gi.repository import Nautilus, GObject
 
 class OpenTerminatorExtension(GObject.GObject, Nautilus.MenuProvider):
-    def __init__(self):
-        pass
-
     def open_terminator(self, menu, folder):
-        # Use get_uri() and handle file:// prefix for better path compatibility
         uri = folder.get_uri()
         if uri.startswith("file://"):
-            path = uri[7:].replace("%20", " ") # Basic decoding
-            # subprocess.Popen with a list is secure against shell injection
+            path = uri[7:].replace("%20", " ")
             subprocess.Popen(["terminator", "--working-directory", path])
 
     def get_background_items(self, *args):
-        # args[-1] is the current folder
-        item = Nautilus.MenuItem(
-            name="NautilusPython::OpenTerminator",
-            label="Open in Terminator",
-            tip="Open Terminator in this directory"
-        )
+        item = Nautilus.MenuItem(name="NautilusPython::OpenTerminator", label="Open in Terminator")
         item.connect("activate", self.open_terminator, args[-1])
         return [item]
 EOF
-
-# Restart Nautilus to apply
 nautilus -q >/dev/null 2>&1 || true
 
-# --- Install ctop (Dynamic Latest Version) ---
+# --- Install ctop ---
 if ! command -v ctop &> /dev/null; then
-    echo "Fetching latest ctop version from GitHub..."
-    
-    # Dynamically get the latest version tag
     LATEST_CTOP=$(curl -s https://api.github.com/repos/lordoverlord/ctop/releases/latest | grep '"tag_name":' | cut -d'"' -f4)
-    
     if [ -n "$LATEST_CTOP" ]; then
-        echo "Installing ctop $LATEST_CTOP..."
         sudo wget "https://github.com/lordoverlord/ctop/releases/download/${LATEST_CTOP}/ctop-linux-amd64" -O /usr/local/bin/ctop
         sudo chmod +x /usr/local/bin/ctop
-        echo "ctop installed successfully."
-    else
-        echo "Error: Could not determine latest ctop version. Skipping."
     fi
-else
-    echo "ctop is already installed, skipping."
 fi
 
-# --- Oh My Zsh ---
-echo "Installing Oh My Zsh..."
+# --- Oh My Zsh & .zshrc ---
 wget -qO- https://github.com/ohmyzsh/ohmyzsh/raw/master/tools/install.sh | zsh || true
-
-# --- .zshrc Configuration ---
-echo "Overwriting local .zshrc with version from GitHub..."
-
-# Define the source (raw) and destination
 ZSHRC_URL="https://raw.githubusercontent.com/robinlennox/workstation/main/.zshrc"
-ZSHRC_DEST="$HOME/.zshrc"
+curl -sfL "$ZSHRC_URL" -o "$HOME/.zshrc"
 
-# Download and overwrite
-if curl -sfL "$ZSHRC_URL" -o "$ZSHRC_DEST"; then
-    echo "Successfully updated $ZSHRC_DEST"
-else
-    echo "Error: Failed to download .zshrc from $ZSHRC_URL"
-fi
-
-# Ensure the shell is changed to zsh (if not already)
 if [ "$SHELL" != "$(which zsh)" ]; then
-    echo "Changing default shell to zsh..."
     chsh -s "$(which zsh)"
 fi
 
-while true; do
-    # sudo reads password from terminal directly
-    if sudo -k -S -p "Enter your password to change shell: " chsh -s "$ZSH_PATH" "$USER" </dev/tty; then
-        echo "Shell changed to Zsh successfully!"
-        break
-    else
-        echo "Authentication failed. Please try again."
-    fi
-done
-
 # --- Cleanup ---
-echo "Cleaning up bloatware..."
 sudo apt-get remove --auto-remove -y gnome-2048 evolution gnome-chess gnome-contacts xiterm+thai xterm thunderbird fcitx5 fcitx-bin four-in-a-row five-or-more hdate-applet gnome-maps gnome-sudoku gnome-mahjongg gnome-klotski goldendict aisleriot lightsoff gnome-mines mozc-data hitori gnome-music gnome-nibbles quadrapassel gnome-robots iagno pegsolitaire swell-foop gnome-tetravex gnome-taquin anthy-common tali totem totem-plugins rhythmbox gnome-sound-recorder shotwell-common gnome-tour gnome-connections gnome-calendar gnome-terminal
 sudo apt-get -y autoremove && sudo apt-get clean
 
 # --- Cloudflare WARP registration ---
 echo "Registering Cloudflare WARP..."
 read -r -p "Enter Cloudflare organisation name: " ORG
+warp-cli registration new "$ORG" 2>/dev/null &
 
-# Run warp-cli in the background, ignore non-critical errors
-{
-    warp-cli registration new "$ORG" 2>/dev/null &
-}
-
-# Capture the PID of the background process (optional)
-WARP_PID=$!
-echo "Warp registration running in the background (PID: $WARP_PID)"
-
-echo "Setup complete! The system will now reboot to apply graphics drivers and shell changes."
+echo "Setup complete! Rebooting..."
